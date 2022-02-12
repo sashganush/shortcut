@@ -71,5 +71,5 @@ func MainHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 
 	http.HandleFunc("/", MainHandler)
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe("localhost:8080", nil)
 }
