@@ -40,7 +40,7 @@ func PostRequestHandler(w http.ResponseWriter, r *http.Request) (s int) {
 
 	n := RandStringRunes(SHORTURLLEN)
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "https://tinyurl.com/%s\n", n)
+	fmt.Fprintf(w, "https://tinyurl.com/%s", n)
 	return http.StatusCreated
 }
 
