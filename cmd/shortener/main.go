@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -33,12 +35,12 @@ func RandStringRunes(n int) string {
 	return string(b)
 }
 
-func PostRequestHandler(w http.ResponseWriter, r *http.Request) (s int) {
+func PostRequestHandler(w http.ResponseWriter, r *http.Request)  {
 
 	oldURL, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return http.StatusInternalServerError
+		return
 	}
 
 	newURL := RandStringRunes(SHORTURLLEN)
@@ -46,40 +48,46 @@ func PostRequestHandler(w http.ResponseWriter, r *http.Request) (s int) {
 
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprintf(w, "%s", newURL)
-	return http.StatusCreated
 }
 
-func GetRequestHandler(w http.ResponseWriter, r *http.Request) (s int) {
+func GetRequestHandler(w http.ResponseWriter, r *http.Request)  {
 
 	if s, exists := allRedirects[strings.TrimPrefix(r.URL.Path, "/")]; exists {
-//		http.Redirect(w, r, s, http.StatusTemporaryRedirect)
-//		return http.StatusTemporaryRedirect
 
 		w.Header().Set("Location", s)
 		w.WriteHeader(http.StatusTemporaryRedirect)
-		return http.StatusCreated
-
+		return
 	}
 	http.Error(w, "Unknown redirect", http.StatusBadRequest)
-	return http.StatusBadRequest
 }
 
-func MainHandler(w http.ResponseWriter, r *http.Request) {
+type Handler func(w http.ResponseWriter, r *http.Request) error
 
-	var s int
-
-	switch r.Method {
-	case "POST":
-		s = PostRequestHandler(w, r)
-	default:
-		s = GetRequestHandler(w, r)
+func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if err := h(w, r); err != nil {
+		// handle returned error here.
+		w.WriteHeader(503)
+		w.Write([]byte("bad"))
 	}
+}
 
-	fmt.Println(time.Now().Format(time.RFC3339), s, r.URL.Path)
+func customHandler(w http.ResponseWriter, r *http.Request) error {
+	GetRequestHandler(w,r)
+	return nil
 }
 
 func main() {
 
-	http.HandleFunc("/", MainHandler)
-	http.ListenAndServe("localhost:8080", nil)
+	r := chi.NewRouter()
+	r.Use(middleware.RequestID)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+
+	r.Method("GET", "/*", Handler(customHandler))
+
+	r.Post("/", func(w http.ResponseWriter, r *http.Request) {
+		PostRequestHandler(w,r)
+	})
+
+	http.ListenAndServe(":8080", r)
 }
