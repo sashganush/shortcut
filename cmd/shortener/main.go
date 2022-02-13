@@ -35,15 +35,17 @@ func RandStringRunes(n int) string {
 
 func PostRequestHandler(w http.ResponseWriter, r *http.Request) (s int) {
 
-	_, err := ioutil.ReadAll(r.Body)
+	oldUrl, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return http.StatusInternalServerError
 	}
 
-	n := RandStringRunes(SHORTURLLEN)
+	newUrl := RandStringRunes(SHORTURLLEN)
+	allRedirects[newUrl] = string(oldUrl[:])
+
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "https://tinyurl.com/%s", n)
+	fmt.Fprintf(w, "https://tinyurl.com/%s", newUrl)
 	return http.StatusCreated
 }
 
