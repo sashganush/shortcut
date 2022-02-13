@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const SHORTURLLEN = 8
+const SHORTURLLEN = 10
 
 var allRedirects = map[string]string{
 	"4444": "https://google.com/abcd",
@@ -52,8 +52,13 @@ func PostRequestHandler(w http.ResponseWriter, r *http.Request) (s int) {
 func GetRequestHandler(w http.ResponseWriter, r *http.Request) (s int) {
 
 	if s, exists := allRedirects[strings.TrimPrefix(r.URL.Path, "/")]; exists {
-		http.Redirect(w, r, s, http.StatusTemporaryRedirect)
-		return http.StatusTemporaryRedirect
+//		http.Redirect(w, r, s, http.StatusTemporaryRedirect)
+//		return http.StatusTemporaryRedirect
+
+		w.Header().Set("Location", s)
+		w.WriteHeader(http.StatusTemporaryRedirect)
+		return http.StatusCreated
+
 	}
 	http.Error(w, "Unknown redirect", http.StatusBadRequest)
 	return http.StatusBadRequest
