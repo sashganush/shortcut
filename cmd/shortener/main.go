@@ -47,7 +47,7 @@ func PostRequestHandler(w http.ResponseWriter, r *http.Request)  {
 	allRedirects[newURL] = string(oldURL[:])
 
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "%s", newURL)
+	fmt.Fprintf(w, "http://localhost:8080/%s", newURL)
 }
 
 func GetRequestHandler(w http.ResponseWriter, r *http.Request)  {
