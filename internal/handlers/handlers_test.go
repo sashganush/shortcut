@@ -1,4 +1,4 @@
-package internal
+package handlers
 
 import (
 	"github.com/stretchr/testify/assert"
@@ -9,39 +9,42 @@ import (
 	"testing"
 )
 
-func TestUserViewHandler(t *testing.T) {
+func TestPingHandler(t *testing.T) {
 	type want struct {
-		code        int
-		response    string
-		contentType string
+		codeGet  int
+		response string
 	}
 	tests := []struct {
-		name string
-		want want
+		name    string
+		want    want
+		request string
 	}{
 		{
 			name: "positive test #1",
 			want: want{
-				code:        307,
-				response:    `https://google.com/abcd`,
+				codeGet:  200,
+				response: `pong`,
 			},
+			request: "/ping",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			request := httptest.NewRequest(http.MethodGet, "/4444", nil)
+			request := httptest.NewRequest(http.MethodGet, tt.request, nil)
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(GetRequestHandler)
+			h := http.HandlerFunc(Ping)
 			h.ServeHTTP(w, request)
 			result := w.Result()
 
+			assert.Equal(t, tt.want.codeGet, result.StatusCode)
 
-			assert.Equal(t, tt.want.code, result.StatusCode)
-
-			_, err := ioutil.ReadAll(result.Body)
+			GetBody, err := ioutil.ReadAll(result.Body)
 			require.NoError(t, err)
 			err = result.Body.Close()
 			require.NoError(t, err)
+
+			require.NoError(t, err)
+			assert.Equal(t, string(GetBody), tt.want.response)
 		})
 	}
 }

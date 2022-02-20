@@ -3,24 +3,34 @@ package main
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	internal "github.com/sashganush/shortcut/internal/app/shortener"
+	handlers "github.com/sashganush/shortcut/internal/handlers"
+	storage "github.com/sashganush/shortcut/internal/storage"
+	"log"
 	"net/http"
 )
 
-func main() {
+func NewRouter() chi.Router {
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(middleware.URLFormat)
 
-	r.Post("/", func(w http.ResponseWriter, r *http.Request) {
-		internal.PostRequestHandler(w,r)
+	r.Route("/", func(r chi.Router) {
+		r.Get("/ping", handlers.Ping)
+		r.Post("/", handlers.PostRequestHandler)
+
+		r.Route("/{ID}", func(r chi.Router) {
+			r.Get("/", handlers.GetRequestHandler)
+		})
 	})
 
-	r.Get("/{id}", func(w http.ResponseWriter, r *http.Request) {
-		internal.GetRequestHandler(w,r)
-	})
+	return r
+}
 
-	http.ListenAndServe(":8080", r)
+func main() {
+
+    r := NewRouter()
+	log.Fatal(http.ListenAndServe(storage.DefaultHostName+storage.DefaultHostPort, r), nil)
 }

@@ -1,42 +1,62 @@
 package main
 
 import (
-	"log"
-	"os"
-	"os/signal"
-	"strings"
-	"syscall"
+	"bytes"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"testing"
 )
 
-func SplitTestArgs(args []string) (testArgs, appArgs []string) {
-	for i, arg := range args {
-		switch {
-		case strings.HasPrefix(arg, "-test."):
-			testArgs = append(testArgs, arg)
-		case i == 0:
-			appArgs = append(appArgs, arg)
-			testArgs = append(testArgs, arg)
-		default:
-			appArgs = append(appArgs, arg)
-		}
+func testRequest(t *testing.T, ts *httptest.Server, method, path string, body string) (*http.Response, string) {
+	ioBody := bytes.NewReader([]byte(body))
+	req, err := http.NewRequest(method, ts.URL+path, ioBody)
+	require.NoError(t, err)
+
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
 	}
-	return
+
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	resp.Body.Close()
+	require.NoError(t, err)
+
+	return resp, string(respBody)
 }
 
-func TestEmpty(t *testing.T) {}
 
-func TestMain(m *testing.M) {
-	if strings.HasSuffix(os.Args[0], ".test") {
-		log.Printf("skip launching server when invoked via go test")
-		return
-	}
+func TestRouter(t *testing.T) {
+	r := NewRouter()
+	ts := httptest.NewServer(r)
+	defer ts.Close()
 
-	testArgs, _ := SplitTestArgs(os.Args)
-	notifier := make(chan os.Signal, 1)
-	signal.Notify(notifier, syscall.SIGINT, syscall.SIGTERM)
+	resp, body := testRequest(t, ts, "GET", "/ping","")
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, "pong", body)
 
-	// This will generate coverage files:
-	os.Args = testArgs
-	m.Run()
+	resp, _ = testRequest(t, ts, "GET", "/123","")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	resp, _ = testRequest(t, ts, "GET", "/","")
+	assert.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
+
+	resp, body = testRequest(t, ts, "POST", "/", "http://www.ya.ru/1")
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	u, _ := url.Parse(body)
+	uri := u.RequestURI()
+
+	resp, _ = testRequest(t, ts, "GET", uri, "")
+	assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)
+
 }
