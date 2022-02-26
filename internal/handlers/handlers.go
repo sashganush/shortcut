@@ -3,12 +3,16 @@ package handlers
 import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
-	"github.com/sashganush/shortcut/internal/storage"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"time"
 )
+
+const ShortURLLen = 10
+const DefaultShema = "http://"
+const DefaultHostName = "localhost"
+const DefaultHostPort = ":8080"
 
 var allRedirects = map[string]string{}
 
@@ -42,13 +46,12 @@ func PostRequestHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	r.Body.Close()
 
-	newURL := RandStringRunes(storage.ShortURLLen)
+	newURL := RandStringRunes(ShortURLLen)
 	allRedirects[newURL] = string(oldURL)
 
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "%s%s%s/%s", storage.DefaultShema, storage.DefaultHostName, storage.DefaultHostPort, newURL)
+	fmt.Fprintf(w, "%s%s%s/%s", DefaultShema, DefaultHostName, DefaultHostPort, newURL)
 }
 
 func GetRequestHandler(w http.ResponseWriter, r *http.Request) {

@@ -4,7 +4,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	handlers "github.com/sashganush/shortcut/internal/handlers"
-	storage "github.com/sashganush/shortcut/internal/storage"
 	"log"
 	"net/http"
 )
@@ -20,10 +19,7 @@ func NewRouter() chi.Router {
 	r.Route("/", func(r chi.Router) {
 		r.Get("/ping", handlers.Ping)
 		r.Post("/", handlers.PostRequestHandler)
-
-		r.Route("/{ID}", func(r chi.Router) {
-			r.Get("/", handlers.GetRequestHandler)
-		})
+		r.Get("/{ID}", handlers.GetRequestHandler)
 	})
 
 	return r
@@ -32,5 +28,5 @@ func NewRouter() chi.Router {
 func main() {
 
     r := NewRouter()
-	log.Fatal(http.ListenAndServe(storage.DefaultHostName+storage.DefaultHostPort, r), nil)
+	log.Fatal(http.ListenAndServe(handlers.DefaultHostName+handlers.DefaultHostPort, r), nil)
 }
