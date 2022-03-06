@@ -7,17 +7,23 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"os"
 	"time"
 )
 
 const ShortURLLen = 10
-const DefaultShema = "http://"
-const DefaultHostName = "localhost"
-const DefaultHostPort = ":8080"
+const DefaultSchema = "http://"
 
 var allRedirects = map[string]string{}
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+var v = os.Getenv("BASE_URL")
+
+func GetBaseUri() string {
+	return "/"+os.Getenv("BASE_URI")
+}
+
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -48,17 +54,16 @@ func PostRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newURL := RandStringRunes(ShortURLLen)
+	newURL := GetBaseUri()+RandStringRunes(ShortURLLen)
 	allRedirects[newURL] = string(oldURL)
 
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "%s%s%s/%s", DefaultShema, DefaultHostName, DefaultHostPort, newURL)
+	fmt.Fprintf(w, "%s%s%s" ,DefaultSchema , r.Host, newURL)
 }
 
 func GetRequestHandler(w http.ResponseWriter, r *http.Request) {
 
-	if s, exists := allRedirects[chi.URLParam(r, "ID")]; exists {
-
+	if s, exists := allRedirects[GetBaseUri()+chi.URLParam(r, "ID")]; exists {
 		w.Header().Set("Location", s)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 		return
@@ -94,17 +99,16 @@ func PostRequestApiHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newURL := RandStringRunes(ShortURLLen)
+	newURL := GetBaseUri()+RandStringRunes(ShortURLLen)
 	allRedirects[newURL] = tmpRequest.Url
 
-	tmpResponse.Result = "http://"+r.Host+"/"+newURL
+	tmpResponse.Result =  DefaultSchema+r.Host+newURL
 
 	ret, err := json.Marshal(tmpResponse)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	w.Write(ret)
