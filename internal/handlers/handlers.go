@@ -68,12 +68,12 @@ func GetRequestHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type RequestJson struct {
-	ID  int `json:"-"`
+	ID  int    `json:"-"`
 	Url string `json:"url"`
 }
 
 type ResponseJson struct {
-	ID  int `json:"-"`
+	ID  int       `json:"-"`
 	Result string `json:"result"`
 }
 
@@ -97,13 +97,14 @@ func PostRequestApiHandler(w http.ResponseWriter, r *http.Request) {
 	newURL := RandStringRunes(ShortURLLen)
 	allRedirects[newURL] = tmpRequest.Url
 
-	tmpResponse.Result = "http://localhost:8080/"+newURL
+	tmpResponse.Result = "http://"+r.Host+"/"+newURL
 
 	ret, err := json.Marshal(tmpResponse)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	w.Write(ret)
