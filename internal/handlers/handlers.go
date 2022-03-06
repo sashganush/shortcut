@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"io/ioutil"
@@ -64,4 +65,46 @@ func GetRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Error(w, "Unknown redirect", http.StatusBadRequest)
+}
+
+type RequestJson struct {
+	ID  int `json:"-"`
+	Url string `json:"url"`
+}
+
+type ResponseJson struct {
+	ID  int `json:"-"`
+	Result string `json:"result"`
+}
+
+func PostRequestApiHandler(w http.ResponseWriter, r *http.Request) {
+
+	var tmpRequest RequestJson
+	var tmpResponse ResponseJson
+
+	defer r.Body.Close()
+	oldURL, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := json.Unmarshal(oldURL, &tmpRequest); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	newURL := RandStringRunes(ShortURLLen)
+	allRedirects[newURL] = tmpRequest.Url
+
+	tmpResponse.Result = "http://localhost:8080/"+newURL
+
+	ret, err := json.Marshal(tmpResponse)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	w.Write(ret)
 }
