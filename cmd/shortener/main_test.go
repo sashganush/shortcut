@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"github.com/sashganush/shortcut/internal/handlers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
@@ -55,6 +57,20 @@ func TestRouter(t *testing.T) {
 
 	u, _ := url.Parse(body)
 	uri := u.RequestURI()
+
+	resp, _ = testRequest(t, ts, "GET", uri, "")
+	assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)
+
+	resp, body = testRequest(t, ts, "POST", "/api/shorten", "{\"url\":\"http://www.ya.ru/2\"}")
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+	assert.Equal(t,"application/json", resp.Header.Get("Content-Type"))
+
+	var responseJson handlers.ResponseJson
+	err := json.Unmarshal([]byte(body), &responseJson)
+	require.NoError(t, err)
+
+	u, _ = url.Parse(responseJson.Result)
+	uri = u.RequestURI()
 
 	resp, _ = testRequest(t, ts, "GET", uri, "")
 	assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)

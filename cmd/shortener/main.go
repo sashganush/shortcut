@@ -15,11 +15,14 @@ func NewRouter() chi.Router {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.URLFormat)
+//	r.Use(middleware.AllowContentEncoding)
+//	r.Use(middleware.AllowContentType)
 
 	r.Route("/", func(r chi.Router) {
 		r.Get("/ping", handlers.Ping)
 		r.Post("/", handlers.PostRequestHandler)
 		r.Get("/{ID}", handlers.GetRequestHandler)
+		r.Post("/api/shorten", handlers.PostRequestApiHandler)
 	})
 
 	return r
