@@ -2,6 +2,10 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
+	"github.com/sashganush/shortcut/internal/config"
+	"github.com/sashganush/shortcut/internal/handlers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
@@ -9,6 +13,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"github.com/caarlos0/env"
 )
 
 func testRequest(t *testing.T, ts *httptest.Server, method, path string, body string) (*http.Response, string) {
@@ -36,6 +41,11 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body st
 
 
 func TestRouter(t *testing.T) {
+
+	if err := env.Parse(&config.Cfg); err != nil {
+		fmt.Println("failed:", err)
+	}
+
 	r := NewRouter()
 	ts := httptest.NewServer(r)
 	defer ts.Close()
@@ -55,6 +65,20 @@ func TestRouter(t *testing.T) {
 
 	u, _ := url.Parse(body)
 	uri := u.RequestURI()
+
+	resp, _ = testRequest(t, ts, "GET", uri, "")
+	assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)
+
+	resp, body = testRequest(t, ts, "POST", "/api/shorten", "{\"url\":\"http://www.ya.ru/2\"}")
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+	assert.Equal(t,"application/json", resp.Header.Get("Content-Type"))
+
+	var responseJson handlers.ResponseJson
+	err := json.Unmarshal([]byte(body), &responseJson)
+	require.NoError(t, err)
+
+	u, _ = url.Parse(responseJson.Result)
+	uri = u.RequestURI()
 
 	resp, _ = testRequest(t, ts, "GET", uri, "")
 	assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)
