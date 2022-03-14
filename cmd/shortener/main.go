@@ -12,8 +12,6 @@ import (
 	"net/url"
 )
 
-var Cfg config.Config
-
 func NewRouter() chi.Router {
 
 	r := chi.NewRouter()
@@ -21,6 +19,8 @@ func NewRouter() chi.Router {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.URLFormat)
+
+	handlers.LoadAllToStorage()
 
 	r.Route("/", func(r chi.Router) {
 		r.Get("/ping", handlers.Ping)
@@ -35,14 +35,14 @@ func NewRouter() chi.Router {
 
 func main() {
 
-	if err := env.Parse(&Cfg); err != nil {
+	if err := env.Parse(&config.Cfg); err != nil {
 		fmt.Println("failed:", err)
 	}
 
-	fmt.Printf("Start at %s%s\n", Cfg.ServerAddress,Cfg.ServerPort)
-	fmt.Printf("Start with base url %s\n", Cfg.BaseUrl)
+	fmt.Printf("Start at %s%s\n", config.Cfg.ServerAddress,config.Cfg.ServerPort)
+	fmt.Printf("Start with base url %s\n", config.Cfg.BaseUrl)
 
-	u, err := url.Parse(Cfg.BaseUrl)
+	u, err := url.Parse(config.Cfg.BaseUrl)
 	if err != nil {
 		panic(err)
 	}
