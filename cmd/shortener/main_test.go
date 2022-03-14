@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"github.com/sashganush/shortcut/internal/config"
 	"github.com/sashganush/shortcut/internal/handlers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -11,6 +13,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"github.com/caarlos0/env"
 )
 
 func testRequest(t *testing.T, ts *httptest.Server, method, path string, body string) (*http.Response, string) {
@@ -38,6 +41,11 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body st
 
 
 func TestRouter(t *testing.T) {
+
+	if err := env.Parse(&config.Cfg); err != nil {
+		fmt.Println("failed:", err)
+	}
+
 	r := NewRouter()
 	ts := httptest.NewServer(r)
 	defer ts.Close()
