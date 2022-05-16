@@ -17,6 +17,9 @@ import (
 func NewRouter() chi.Router {
 
 	r := chi.NewRouter()
+	r.Use(handlers.LengthHandle)
+	r.Use(handlers.GzipHandle)
+//	r.Use(middleware.Compress(5))
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
@@ -53,13 +56,11 @@ func Execute() error {
 }
 
 var flagServerAddress string
-var flagServerPort string
 var flagBaseUrl string
 var flagFileStoragePath string
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&flagServerAddress, "serveraddress","a", "", "service address the same from SERVER_ADDRESS")
-	rootCmd.PersistentFlags().StringVarP(&flagServerPort, "serverport","p", "", "service port the same from SERVER_PORT")
 	rootCmd.PersistentFlags().StringVarP(&flagBaseUrl, "baseurl","b", "", "base url the same like BASE_URL env")
 	rootCmd.PersistentFlags().StringVarP(&flagFileStoragePath, "filestoragepath","f", "", "file storage path the same like FILE_STORAGE_PATH env")
 }

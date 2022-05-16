@@ -1,15 +1,19 @@
 package handlers
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/sashganush/shortcut/internal/config"
+	"io"
 	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
 	"os"
+//	"strconv"
+	"strings"
 	"time"
 )
 
@@ -26,6 +30,15 @@ func GetBaseUri() string {
 	return "/"+os.Getenv("BASE_URI")
 }
 
+type gzipWriter struct {
+	http.ResponseWriter
+	Writer io.Writer
+}
+
+func (w gzipWriter) Write(b []byte) (int, error) {
+	// w.Writer будет отвечать за gzip-сжатие, поэтому пишем в него
+	return w.Writer.Write(b)
+}
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -224,4 +237,60 @@ func LoadAllToStorage() error {
 //		fmt.Println(AllRedirects[GetBaseUri()+readedRedirect.ShortUrl])
 	}
   return nil
+}
+
+
+func GzipHandle(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// проверяем, что клиент поддерживает gzip-сжатие
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			// если gzip не поддерживается, передаём управление
+			// дальше без изменений
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// создаём gzip.Writer поверх текущего w
+		gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
+		if err != nil {
+			io.WriteString(w, err.Error())
+			return
+		}
+		defer gz.Close()
+
+		w.Header().Set("Content-Encoding", "gzip")
+		// передаём обработчику страницы переменную типа gzipWriter для вывода данных
+		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
+	})
+}
+
+func LengthHandle(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		//func LengthHandle(w http.ResponseWriter, r *http.Request) {
+		// переменная reader будет равна r.Body или *gzip.Reader
+		var reader io.Reader
+
+		if r.Header.Get(`Content-Encoding`) == `gzip` {
+			gz, err := gzip.NewReader(r.Body)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			reader = gz
+			defer gz.Close()
+		} else {
+			reader = r.Body
+		}
+
+		body, err := io.ReadAll(reader)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		stringReader := strings.NewReader(string(body))
+		r.Body = ioutil.NopCloser(stringReader)
+		next.ServeHTTP(w, r)
+
+	})
 }
